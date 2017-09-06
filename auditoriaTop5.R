@@ -116,11 +116,12 @@ Top5Answers <- function(){
 		    which.max %>%
 		    files[.]
 		
-		data_types <- rep("text", ncol(read_excel(filePath)))
+		# data_types <- rep("text", ncol(read_excel(filePath)))  # Removed: No longer needed because 'readxl' now
+		# recycles the col_types argument when it is of length one.
 		
-		proveedoresDF <- read_excel(filePath, sheet=1, col_types = data_types)
+		proveedoresDF <- read_excel(filePath, sheet=1, col_types = "text")
 		
-		# Data Cleaning
+		# Some Data Cleaning
 		names(proveedoresDF) <- make.names(names(proveedoresDF), unique = T)
 		names(proveedoresDF) <- iconv(names(proveedoresDF), to='ASCII//TRANSLIT')
 		names(proveedoresDF) <- gsub("[^[:alnum:]]", "", names(proveedoresDF))
@@ -133,6 +134,7 @@ Top5Answers <- function(){
 		# Activos/Bloqueados
 		proveedoresDF <- mutate(proveedoresDF, status = ifelse(is.na(B) & is.na(B1) & is.na(B2), "ACTIVO", "BLOQUEADO"))
 		
+		# Summary of ACTIVE-BLOCKED
 		resumen_proveedores <- proveedoresDF %>%
 		                            group_by(status) %>%
 		                            summarize(cuenta = n_distinct(Acreedor)) %>%
