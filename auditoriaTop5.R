@@ -1,4 +1,7 @@
-# This script gives the necessary info to answer TOP 5 Questionnaire
+# This script gives the necessary info to answer TOP 5 Questionnaire (Audit Process).
+# It creates the function that will do the work, then we just need to call the function, without any argument.
+
+# Packages ----
 library(readxl)
 library(reshape2)
 library(dplyr)
@@ -6,16 +9,17 @@ library(tidyr)
 library(lubridate)
 library(ggplot2)
 library(openxlsx)
-library(RColorBrewer)
+# library(RColorBrewer)
 # library(ggmap)
 # library(leaflet)
 #library(plotly)
 #library(googleVis)
 library(magrittr)
 
-
+# Function ----
 Top5Answers <- function(){
-		
+	
+    # CUSTOMERS	----
     # Reading the last Master Data in the specified folder
     files <- list.files("./data/clientes/", full.names = T)
     
@@ -24,16 +28,16 @@ Top5Answers <- function(){
         which.max %>%
         files[.]
     
-    data_types <- rep("text", 64)
+    #data_types <- rep("text", 64)  # Removed: no longer needed
     
-    clientesDF <- read_excel(filePath, sheet=1, col_types = data_types)
-    # clientesTxt <- tbl_df(read.csv("D:/JAVIER.ADANAQUE/ESCRITORIO/MAESTRO-CLIENTES-03.02.2016.csv", header = T))  # This is faster, but read_excel does a better work identifying the class of each variable
+    clientesDF <- read_excel(filePath, sheet=1, col_types = "text")
+    
     names(clientesDF) <- make.names(names(clientesDF), unique = T)
     names(clientesDF) <- iconv(names(clientesDF), to='ASCII//TRANSLIT')
     names(clientesDF) <- gsub("[^[:alnum:]]", "", names(clientesDF))
     
     ##clientesDF$Creadoel <- as.Date(as.numeric(clientesDF$Creadoel), origin = as.Date("1899-12-30"), tz = "GMT")  # Not necessary for Top5
-    clientesDF  <- mutate(clientesDF, Se = as.numeric(Se), BqPed = as.numeric(BqPed), BloqPed = as.numeric(BloqPed))
+    clientesDF <- mutate(clientesDF, Se = as.integer(Se), BqPed = as.integer(BqPed), BloqPed = as.integer(BloqPed))
     
     # Eliminating duplicates
     clientesDF <- select(clientesDF, -Noctaant, -CP, -Viaspago, -PrioE, -ImpRmto, -OrdRmto, -RecFinan,
@@ -48,10 +52,12 @@ Top5Answers <- function(){
                              stringsAsFactors = F)
     clientesDF <- left_join(clientesDF, groupNames, by = "Grupo")
 		
-		# Summarizing info
+		# Summarizing data
 		uniqueClients <- dcast(clientesDF, Grupo ~ OrgVt, n_distinct, value.var = "Cliente", margins = T)  # Total Unique Codes. Combination: Grupo-OrgVt
 		
-		# Blocked clientes
+		# Blocked customers: It considers global inactivation, i.e., the customer must be inactive (blocked)
+		# in every "sector" to be considered BLOCKED. If it is active only in one sector (say Kerastase), it is
+		# considered ACTIVE
 		activos_bloqueadosDF <- clientesDF %>%
 		    group_by(Cliente, CDis) %>%
 		    mutate(sec_len_G = n(),
@@ -61,17 +67,19 @@ Top5Answers <- function(){
 		                             "BLOQUEADO", "ACTIVO")) %>%
 		    ungroup()
 		
+		# Dataframe with unique codes (customers) and status (active-inactive)
 		unique_activos_bloqueadosDF <- activos_bloqueadosDF %>% 
 		                            select(-(1:3)) %>%
 		                            distinct(Cliente, .keep_all = TRUE)
 		
-		
+		# Summary of ACTIVE-BLOCKED
 		resumen_activos_bloqueados <- activos_bloqueadosDF %>%
 		                group_by(status_G) %>%
 		                summarise(cuenta = n_distinct(Cliente)) %>%  # códigos únicos
 		                mutate(porcentaje = paste0(format((cuenta / sum(cuenta)) * 100, digits = 2, nsmall = 2), "%")) %>%
 		                add_row(status_G = "TOTAL", cuenta = sum(.$cuenta), porcentaje = "100%")
 		
+		# ACTIVE-BLOCKED. This time, by sector
 		status_x_sector <- clientesDF %>%
 		    select(Cliente, OrgVt, CDis, Se, Grupo, BqPed, BloqPed) %>%
 		    filter(CDis == "02", Grupo %in% c("PP01", "P003", "PP03")) %>%  # Sólo Solicitantes, Free Deliverys y Pagadores del canal 02
