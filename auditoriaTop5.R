@@ -67,6 +67,18 @@ Top5Answers <- function(){
 		                             "BLOQUEADO", "ACTIVO")) %>%
 		    ungroup()
 		
+		# Addition 2018/11/14: Blocked customers by OrgVt.. For every OrgVt., if the customer is ACTIVE
+		# in at least one sector, it will be ACTIVE for the entire OrgVt.. In this case, a customer can
+		# be ACTIVE in one OrgVt. but not in another
+		# ACTIVOS <-> NA
+		activos_bloqueadosDF <- activos_bloqueadosDF %>%
+		    group_by(Cliente, OrgVt, CDis) %>%
+		    mutate(n_activos_ov = sum(is.na(BloqPed)),
+		           status_OV = ifelse(BqPed %in%  c(10, 12) | n_activos_ov == 0,
+		                              "BLOQUEADO",
+		                              "ACTIVO")) %>%
+		    ungroup()
+		
 		# Dataframe with unique codes (customers) and status (active-inactive)
 		unique_activos_bloqueadosDF <- activos_bloqueadosDF %>% 
 		                            select(-(1:3)) %>%
@@ -91,7 +103,7 @@ Top5Answers <- function(){
 		# Saving the summary tables to files
 		top5excelPath <- paste0("./reportes/top5answers-", gsub("-", "", today()), ".xlsx")
 		
-		activos_bloqueadosDF <- select(activos_bloqueadosDF, 1:37, 41)  # Removes columns created for computation only
+		activos_bloqueadosDF <- select(activos_bloqueadosDF, -(38:40))  # Removes columns created for computation only
 		
 		wb <- createWorkbook()
 		addWorksheet(wb, "CodigosUnicos")
