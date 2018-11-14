@@ -103,7 +103,7 @@ Top5Answers <- function(){
 		# Saving the summary tables to files
 		top5excelPath <- paste0("./reportes/top5answers-", gsub("-", "", today()), ".xlsx")
 		
-		activos_bloqueadosDF <- select(activos_bloqueadosDF, -(38:40))  # Removes columns created for computation only
+		activos_bloqueadosDF <- select(activos_bloqueadosDF, -(38:40), -42)  # Removes columns created for computation only
 		
 		wb <- createWorkbook()
 		addWorksheet(wb, "CodigosUnicos")
